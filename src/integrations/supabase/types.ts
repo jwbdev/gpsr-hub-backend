@@ -14,7 +14,151 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          parent_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          parent_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          parent_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          gpsr_additional_safety_info: string | null
+          gpsr_certificates: string | null
+          gpsr_declarations_of_conformity: string | null
+          gpsr_identification_details: string | null
+          gpsr_instructions_manual: string | null
+          gpsr_last_moderation_date: string | null
+          gpsr_last_submission_date: string | null
+          gpsr_moderation_comment: string | null
+          gpsr_moderation_status: string | null
+          gpsr_online_instructions_url: string | null
+          gpsr_pictograms: string[] | null
+          gpsr_statement_of_compliance: boolean | null
+          gpsr_submitted_by_supplier_user: string | null
+          gpsr_warning_phrases: string[] | null
+          gpsr_warning_text: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          gpsr_additional_safety_info?: string | null
+          gpsr_certificates?: string | null
+          gpsr_declarations_of_conformity?: string | null
+          gpsr_identification_details?: string | null
+          gpsr_instructions_manual?: string | null
+          gpsr_last_moderation_date?: string | null
+          gpsr_last_submission_date?: string | null
+          gpsr_moderation_comment?: string | null
+          gpsr_moderation_status?: string | null
+          gpsr_online_instructions_url?: string | null
+          gpsr_pictograms?: string[] | null
+          gpsr_statement_of_compliance?: boolean | null
+          gpsr_submitted_by_supplier_user?: string | null
+          gpsr_warning_phrases?: string[] | null
+          gpsr_warning_text?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          gpsr_additional_safety_info?: string | null
+          gpsr_certificates?: string | null
+          gpsr_declarations_of_conformity?: string | null
+          gpsr_identification_details?: string | null
+          gpsr_instructions_manual?: string | null
+          gpsr_last_moderation_date?: string | null
+          gpsr_last_submission_date?: string | null
+          gpsr_moderation_comment?: string | null
+          gpsr_moderation_status?: string | null
+          gpsr_online_instructions_url?: string | null
+          gpsr_pictograms?: string[] | null
+          gpsr_statement_of_compliance?: boolean | null
+          gpsr_submitted_by_supplier_user?: string | null
+          gpsr_warning_phrases?: string[] | null
+          gpsr_warning_text?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
