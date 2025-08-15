@@ -208,8 +208,7 @@ export default function Categories() {
                   <SelectTrigger>
                     <SelectValue placeholder="Select parent category (optional)" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                  <SelectContent>                    
                     {categories
                       .filter(cat => cat.id !== editingCategory?.id)
                       .map(category => (
