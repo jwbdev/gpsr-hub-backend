@@ -121,8 +121,7 @@ export default function Products() {
           <SelectTrigger className="w-64">
             <SelectValue placeholder="Filter by category" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">All categories</SelectItem>
+          <SelectContent>            
             {categories.map(category => (
               <SelectItem key={category.id} value={category.id}>
                 {category.name}
