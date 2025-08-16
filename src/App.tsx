@@ -9,6 +9,7 @@ import { Navbar } from "@/components/Navbar";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Categories from "./pages/Categories";
+import CategoryBrowser from "./pages/CategoryBrowser";
 import Products from "./pages/Products";
 import ProductForm from "./pages/ProductForm";
 import ProductDetail from "./pages/ProductDetail";
@@ -30,6 +31,11 @@ const App = () => (
             <Route path="/categories" element={
               <ProtectedRoute>
                 <Categories />
+              </ProtectedRoute>
+            } />
+            <Route path="/category-browser" element={
+              <ProtectedRoute>
+                <CategoryBrowser />
               </ProtectedRoute>
             } />
             <Route path="/products" element={

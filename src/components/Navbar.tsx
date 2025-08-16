@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { LogOut, User, Package, FolderTree } from 'lucide-react';
+import { LogOut, User, Package, FolderTree, Search } from 'lucide-react';
 
 export const Navbar = () => {
   const { user, signOut } = useAuth();
@@ -30,6 +30,18 @@ export const Navbar = () => {
                 >
                   <FolderTree className="h-4 w-4" />
                   <span>Categories</span>
+                </Link>
+
+                <Link
+                  to="/category-browser"
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive('/category-browser')
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                  }`}
+                >
+                  <Search className="h-4 w-4" />
+                  <span>Browse Tree</span>
                 </Link>
                 
                 <Link
