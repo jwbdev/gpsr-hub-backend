@@ -15,14 +15,26 @@ export const categoriesService = {
   async getCategories(): Promise<Category[]> {
     const { data, error } = await supabase
       .from('categories')
-      .select(`
-        *,
-        owner_name:get_owner_name(user_id)
-      `)
+      .select('*')
       .order('name');
     
     if (error) throw error;
-    return data || [];
+    
+    // Get owner names using the secure function
+    const categoriesWithOwners = await Promise.all(
+      (data || []).map(async (category: any) => {
+        const { data: ownerName } = await supabase.rpc('get_owner_name', {
+          owner_user_id: category.user_id
+        });
+        
+        return {
+          ...category,
+          owner_name: ownerName || 'Unknown User'
+        };
+      })
+    );
+    
+    return categoriesWithOwners;
   },
 
   async createCategory(category: Omit<Category, 'id' | 'created_at' | 'updated_at' | 'user_id'>): Promise<Category> {

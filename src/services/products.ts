@@ -28,10 +28,7 @@ export const productsService = {
   async getProducts(categoryId?: string): Promise<Product[]> {
     let query = supabase
       .from('products')
-      .select(`
-        *,
-        owner_name:get_owner_name(user_id)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (categoryId) {
@@ -41,21 +38,42 @@ export const productsService = {
     const { data, error } = await query;
     
     if (error) throw error;
-    return data || [];
+    
+    // Get owner names using the secure function
+    const productsWithOwners = await Promise.all(
+      (data || []).map(async (product: any) => {
+        const { data: ownerName } = await supabase.rpc('get_owner_name', {
+          owner_user_id: product.user_id
+        });
+        
+        return {
+          ...product,
+          owner_name: ownerName || 'Unknown User'
+        };
+      })
+    );
+    
+    return productsWithOwners;
   },
 
   async getProduct(id: string): Promise<Product> {
     const { data, error } = await supabase
       .from('products')
-      .select(`
-        *,
-        owner_name:get_owner_name(user_id)
-      `)
+      .select('*')
       .eq('id', id)
       .single();
     
     if (error) throw error;
-    return data;
+    
+    // Get owner name using the secure function
+    const { data: ownerName } = await supabase.rpc('get_owner_name', {
+      owner_user_id: data.user_id
+    });
+    
+    return {
+      ...data,
+      owner_name: ownerName || 'Unknown User'
+    };
   },
 
   async createProduct(product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'user_id'>): Promise<Product> {
