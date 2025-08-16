@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,11 +10,30 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { productsService, Product } from '@/services/products';
 import { categoriesService, Category } from '@/services/categories';
 import { useAuth } from '@/hooks/useAuth';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, AlertCircle } from 'lucide-react';
+
+// Validation schema
+const productSchema = z.object({
+  gpsr_identification_details: z.string().min(1, "Product identification is required").max(500, "Product identification must be less than 500 characters"),
+  category_id: z.string().min(1, "Category is required"),
+  gpsr_warning_text: z.string().max(1000, "Warning text must be less than 1000 characters").optional(),
+  gpsr_additional_safety_info: z.string().max(1000, "Additional safety info must be less than 1000 characters").optional(),
+  gpsr_statement_of_compliance: z.boolean().optional(),
+  gpsr_online_instructions_url: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  gpsr_moderation_status: z.enum(["PENDING", "APPROVED", "REJECTED"]).optional(),
+  gpsr_moderation_comment: z.string().max(500, "Moderation comment must be less than 500 characters").optional(),
+  gpsr_last_submission_date: z.string().optional(),
+  gpsr_last_moderation_date: z.string().optional(),
+  gpsr_submitted_by_supplier_user: z.string().max(100, "Supplier user must be less than 100 characters").optional(),
+});
+
+type ProductFormData = z.infer<typeof productSchema>;
 
 export default function ProductForm() {
   const { id } = useParams();
@@ -26,6 +48,24 @@ export default function ProductForm() {
   const [warningPhrases, setWarningPhrases] = useState<string[]>([]);
   const [pictograms, setPictograms] = useState<string[]>([]);
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  const form = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      gpsr_identification_details: "",
+      category_id: "",
+      gpsr_warning_text: "",
+      gpsr_additional_safety_info: "",
+      gpsr_statement_of_compliance: false,
+      gpsr_online_instructions_url: "",
+      gpsr_moderation_status: "PENDING",
+      gpsr_moderation_comment: "",
+      gpsr_last_submission_date: "",
+      gpsr_last_moderation_date: "",
+      gpsr_submitted_by_supplier_user: "",
+    }
+  });
 
   useEffect(() => {
     loadCategories();
@@ -55,6 +95,21 @@ export default function ProductForm() {
       setProduct(data);
       setWarningPhrases(data.gpsr_warning_phrases || []);
       setPictograms(data.gpsr_pictograms || []);
+      
+      // Reset form with loaded data
+      form.reset({
+        gpsr_identification_details: data.gpsr_identification_details || "",
+        category_id: data.category_id || "",
+        gpsr_warning_text: data.gpsr_warning_text || "",
+        gpsr_additional_safety_info: data.gpsr_additional_safety_info || "",
+        gpsr_statement_of_compliance: data.gpsr_statement_of_compliance || false,
+        gpsr_online_instructions_url: data.gpsr_online_instructions_url || "",
+        gpsr_moderation_status: data.gpsr_moderation_status as "PENDING" | "APPROVED" | "REJECTED" || "PENDING",
+        gpsr_moderation_comment: data.gpsr_moderation_comment || "",
+        gpsr_last_submission_date: data.gpsr_last_submission_date || "",
+        gpsr_last_moderation_date: data.gpsr_last_moderation_date || "",
+        gpsr_submitted_by_supplier_user: data.gpsr_submitted_by_supplier_user || "",
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -118,26 +173,50 @@ export default function ProductForm() {
     setPictograms(pictograms.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setSaving(true);
+  const validateWarningPhrases = () => {
+    const errors: string[] = [];
+    warningPhrases.forEach((phrase, index) => {
+      if (phrase.trim() && phrase.length > 200) {
+        errors.push(`Warning phrase ${index + 1}: Must be less than 200 characters`);
+      }
+    });
+    return errors;
+  };
 
-    const formData = new FormData(e.currentTarget);
+  const validatePictograms = () => {
+    const errors: string[] = [];
+    pictograms.forEach((pictogram, index) => {
+      if (pictogram.trim()) {
+        try {
+          new URL(pictogram);
+        } catch {
+          errors.push(`Pictogram ${index + 1}: Must be a valid URL`);
+        }
+      }
+    });
+    return errors;
+  };
+
+  const handleSubmit = async (data: ProductFormData) => {
+    setSaving(true);
+    setValidationErrors([]);
+
+    // Additional validation for dynamic arrays
+    const warningErrors = validateWarningPhrases();
+    const pictogramErrors = validatePictograms();
+    const allErrors = [...warningErrors, ...pictogramErrors];
+
+    if (allErrors.length > 0) {
+      setValidationErrors(allErrors);
+      setSaving(false);
+      return;
+    }
+
     const productData = {
       ...product,
-      gpsr_identification_details: formData.get('gpsr_identification_details') as string,
+      ...data,
       gpsr_warning_phrases: warningPhrases.filter(p => p.trim()),
-      gpsr_warning_text: formData.get('gpsr_warning_text') as string,
       gpsr_pictograms: pictograms.filter(p => p.trim()),
-      gpsr_additional_safety_info: formData.get('gpsr_additional_safety_info') as string,
-      gpsr_statement_of_compliance: formData.get('gpsr_statement_of_compliance') === 'on',
-      gpsr_online_instructions_url: formData.get('gpsr_online_instructions_url') as string,
-      gpsr_moderation_status: formData.get('gpsr_moderation_status') as 'PENDING' | 'APPROVED' | 'REJECTED',
-      gpsr_moderation_comment: formData.get('gpsr_moderation_comment') as string,
-      gpsr_last_submission_date: formData.get('gpsr_last_submission_date') as string,
-      gpsr_last_moderation_date: formData.get('gpsr_last_moderation_date') as string,
-      gpsr_submitted_by_supplier_user: formData.get('gpsr_submitted_by_supplier_user') as string,
-      category_id: formData.get('category_id') as string || undefined,
     };
 
     try {
@@ -155,10 +234,11 @@ export default function ProductForm() {
         });
       }
       navigate('/products');
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error?.message || "Failed to save product";
       toast({
         title: "Error",
-        description: "Failed to save product",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -183,140 +263,218 @@ export default function ProductForm() {
           <h1 className="text-3xl font-bold">{id ? 'Edit Product' : 'Create Product'}</h1>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="gpsr_identification_details">Product Identification</Label>
-                  <Input
-                    id="gpsr_identification_details"
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)}>
+            <div className="space-y-6">
+              {validationErrors.length > 0 && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <div className="space-y-1">
+                      <div className="font-medium">Please fix the following errors:</div>
+                      <ul className="list-disc list-inside space-y-1">
+                        {validationErrors.map((error, index) => (
+                          <li key={index} className="text-sm">{error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Basic Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
                     name="gpsr_identification_details"
-                    defaultValue={product.gpsr_identification_details}
-                    placeholder="Enter product identification details"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Product Identification *</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter product identification details"
+                            {...field}
+                            className={form.formState.errors.gpsr_identification_details ? "border-destructive" : ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="category_id">Category</Label>
-                  <Select name="category_id" defaultValue={product.category_id}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map(category => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
+                  <FormField
+                    control={form.control}
+                    name="category_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category *</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className={form.formState.errors.category_id ? "border-destructive" : ""}>
+                              <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {categories.map(category => (
+                              <SelectItem key={category.id} value={category.id}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Safety Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Warning Phrases</Label>
-                  {warningPhrases.map((phrase, index) => (
-                    <div key={index} className="flex gap-2">
-                      <Input
-                        value={phrase}
-                        onChange={(e) => updateWarningPhrase(index, e.target.value)}
-                        placeholder="Enter warning phrase"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeWarningPhrase(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button type="button" variant="outline" onClick={addWarningPhrase}>
-                    Add Warning Phrase
-                  </Button>
-                </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Safety Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Warning Phrases</Label>
+                    {warningPhrases.map((phrase, index) => (
+                      <div key={index} className="flex gap-2">
+                        <Input
+                          value={phrase}
+                          onChange={(e) => updateWarningPhrase(index, e.target.value)}
+                          placeholder="Enter warning phrase (max 200 characters)"
+                          className={phrase.length > 200 ? "border-destructive" : ""}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeWarningPhrase(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" onClick={addWarningPhrase}>
+                      Add Warning Phrase
+                    </Button>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="gpsr_warning_text">Warning Text</Label>
-                  <Textarea
-                    id="gpsr_warning_text"
+                  <FormField
+                    control={form.control}
                     name="gpsr_warning_text"
-                    defaultValue={product.gpsr_warning_text}
-                    placeholder="Enter detailed warning text"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Warning Text</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Enter detailed warning text"
+                            {...field}
+                            className={form.formState.errors.gpsr_warning_text ? "border-destructive" : ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
 
-                <div className="space-y-2">
-                  <Label>Pictogram URLs</Label>
-                  {pictograms.map((pictogram, index) => (
-                    <div key={index} className="flex gap-2">
-                      <Input
-                        value={pictogram}
-                        onChange={(e) => updatePictogram(index, e.target.value)}
-                        placeholder="Enter pictogram URL"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removePictogram(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button type="button" variant="outline" onClick={addPictogram}>
-                    Add Pictogram URL
-                  </Button>
-                </div>
+                  <div className="space-y-2">
+                    <Label>Pictogram URLs</Label>
+                    {pictograms.map((pictogram, index) => {
+                      const isValidUrl = !pictogram.trim() || (() => {
+                        try {
+                          new URL(pictogram);
+                          return true;
+                        } catch {
+                          return false;
+                        }
+                      })();
 
-                <div className="space-y-2">
-                  <Label htmlFor="gpsr_additional_safety_info">Additional Safety Information</Label>
-                  <Textarea
-                    id="gpsr_additional_safety_info"
+                      return (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            value={pictogram}
+                            onChange={(e) => updatePictogram(index, e.target.value)}
+                            placeholder="Enter pictogram URL (https://example.com/image.png)"
+                            className={!isValidUrl ? "border-destructive" : ""}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removePictogram(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                    <Button type="button" variant="outline" onClick={addPictogram}>
+                      Add Pictogram URL
+                    </Button>
+                  </div>
+
+                  <FormField
+                    control={form.control}
                     name="gpsr_additional_safety_info"
-                    defaultValue={product.gpsr_additional_safety_info}
-                    placeholder="Enter additional safety information"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Additional Safety Information</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Enter additional safety information"
+                            {...field}
+                            className={form.formState.errors.gpsr_additional_safety_info ? "border-destructive" : ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
 
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="gpsr_statement_of_compliance"
+                  <FormField
+                    control={form.control}
                     name="gpsr_statement_of_compliance"
-                    defaultChecked={product.gpsr_statement_of_compliance}
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel>Statement of Compliance</FormLabel>
+                      </FormItem>
+                    )}
                   />
-                  <Label htmlFor="gpsr_statement_of_compliance">Statement of Compliance</Label>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Documentation</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="gpsr_online_instructions_url">Online Instructions URL</Label>
-                  <Input
-                    id="gpsr_online_instructions_url"
+              <Card>
+                <CardHeader>
+                  <CardTitle>Documentation</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
                     name="gpsr_online_instructions_url"
-                    type="url"
-                    defaultValue={product.gpsr_online_instructions_url}
-                    placeholder="https://example.com/instructions"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Online Instructions URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="url"
+                            placeholder="https://example.com/instructions"
+                            {...field}
+                            className={form.formState.errors.gpsr_online_instructions_url ? "border-destructive" : ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="gpsr_instructions_manual">Instructions Manual</Label>
@@ -380,68 +538,107 @@ export default function ProductForm() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Moderation</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="gpsr_moderation_status">Moderation Status</Label>
-                  <Select name="gpsr_moderation_status" defaultValue={product.gpsr_moderation_status || 'PENDING'}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PENDING">Pending</SelectItem>
-                      <SelectItem value="APPROVED">Approved</SelectItem>
-                      <SelectItem value="REJECTED">Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Moderation</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="gpsr_moderation_status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Moderation Status</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="PENDING">Pending</SelectItem>
+                            <SelectItem value="APPROVED">Approved</SelectItem>
+                            <SelectItem value="REJECTED">Rejected</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <div className="space-y-2">
-                  <Label htmlFor="gpsr_moderation_comment">Moderation Comment</Label>
-                  <Textarea
-                    id="gpsr_moderation_comment"
+                  <FormField
+                    control={form.control}
                     name="gpsr_moderation_comment"
-                    defaultValue={product.gpsr_moderation_comment}
-                    placeholder="Enter moderation comments"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Moderation Comment</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Enter moderation comments"
+                            {...field}
+                            className={form.formState.errors.gpsr_moderation_comment ? "border-destructive" : ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="gpsr_last_submission_date">Last Submission Date</Label>
-                    <Input
-                      id="gpsr_last_submission_date"
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
                       name="gpsr_last_submission_date"
-                      type="date"
-                      defaultValue={product.gpsr_last_submission_date}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Submission Date</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="gpsr_last_moderation_date">Last Moderation Date</Label>
-                    <Input
-                      id="gpsr_last_moderation_date"
+                    <FormField
+                      control={form.control}
                       name="gpsr_last_moderation_date"
-                      type="date"
-                      defaultValue={product.gpsr_last_moderation_date}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Moderation Date</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="gpsr_submitted_by_supplier_user">Submitted by Supplier User</Label>
-                  <Input
-                    id="gpsr_submitted_by_supplier_user"
+                  <FormField
+                    control={form.control}
                     name="gpsr_submitted_by_supplier_user"
-                    defaultValue={product.gpsr_submitted_by_supplier_user}
-                    placeholder="Enter supplier user ID"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Submitted by Supplier User</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter supplier user ID"
+                            {...field}
+                            className={form.formState.errors.gpsr_submitted_by_supplier_user ? "border-destructive" : ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
             <div className="flex justify-end space-x-4">
               <Button type="button" variant="outline" onClick={() => navigate('/products')}>
@@ -451,8 +648,9 @@ export default function ProductForm() {
                 {saving ? 'Saving...' : id ? 'Update Product' : 'Create Product'}
               </Button>
             </div>
-          </div>
-        </form>
+            </div>
+          </form>
+        </Form>
       </div>
     </div>
   );
