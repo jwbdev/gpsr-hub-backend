@@ -71,16 +71,21 @@ export default function AccessRequests() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Access Requests</h1>
-        <Badge variant="secondary" className="text-sm">
-          {requests.length} pending request{requests.length !== 1 ? 's' : ''}
-        </Badge>
+        <div className="flex gap-2">
+          <Badge variant="secondary" className="text-sm">
+            {requests.filter(r => r.status === 'pending').length} pending
+          </Badge>
+          <Badge variant="outline" className="text-sm">
+            {requests.filter(r => r.status === 'approved').length} approved
+          </Badge>
+        </div>
       </div>
 
       {requests.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
             <Share className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-medium mb-2">No pending requests</h3>
+            <h3 className="text-lg font-medium mb-2">No access requests</h3>
             <p className="text-muted-foreground">
               When other users request access to your categories or products, they will appear here.
             </p>
@@ -102,9 +107,16 @@ export default function AccessRequests() {
                       Access Request for {request.resource_type}
                     </CardTitle>
                   </div>
-                  <Badge variant="outline">
-                    {formatDate(request.created_at)}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      variant={request.status === 'approved' ? 'default' : request.status === 'rejected' ? 'destructive' : 'secondary'}
+                    >
+                      {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                    </Badge>
+                    <Badge variant="outline">
+                      {formatDate(request.created_at)}
+                    </Badge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -126,23 +138,25 @@ export default function AccessRequests() {
                     </div>
                   )}
 
-                  <div className="flex justify-end space-x-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRequestAction(request.id, 'rejected')}
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      Reject
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => handleRequestAction(request.id, 'approved')}
-                    >
-                      <Check className="h-4 w-4 mr-2" />
-                      Approve
-                    </Button>
-                  </div>
+                  {request.status === 'pending' && (
+                    <div className="flex justify-end space-x-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRequestAction(request.id, 'rejected')}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Reject
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleRequestAction(request.id, 'approved')}
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        Approve
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -54,7 +54,6 @@ export const accessRequestsService = {
       .from('access_requests')
       .select('*')
       .eq('owner_user_id', user.id)
-      .eq('status', 'pending')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
