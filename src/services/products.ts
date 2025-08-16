@@ -101,6 +101,20 @@ export const productsService = {
   },
 
   async updateProduct(id: string, updates: Partial<Omit<Product, 'id' | 'created_at' | 'updated_at' | 'user_id'>>): Promise<Product> {
+    // First check if the product exists and user owns it
+    const { data: existingProduct, error: fetchError } = await supabase
+      .from('products')
+      .select('user_id')
+      .eq('id', id)
+      .single();
+    
+    if (fetchError) throw new Error('Product not found');
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || existingProduct.user_id !== user.id) {
+      throw new Error('You can only edit products you own');
+    }
+
     const { data, error } = await supabase
       .from('products')
       .update(updates)
@@ -113,6 +127,20 @@ export const productsService = {
   },
 
   async deleteProduct(id: string): Promise<void> {
+    // First check if the product exists and user owns it
+    const { data: existingProduct, error: fetchError } = await supabase
+      .from('products')
+      .select('user_id')
+      .eq('id', id)
+      .single();
+    
+    if (fetchError) throw new Error('Product not found');
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || existingProduct.user_id !== user.id) {
+      throw new Error('You can only delete products you own');
+    }
+
     const { error } = await supabase
       .from('products')
       .delete()
