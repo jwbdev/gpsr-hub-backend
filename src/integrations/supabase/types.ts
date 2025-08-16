@@ -163,6 +163,13 @@ export type Database = {
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "products_gpsr_submitted_by_supplier_user_fkey"
+            columns: ["gpsr_submitted_by_supplier_user"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
