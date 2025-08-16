@@ -39,6 +39,9 @@ export const productsService = {
     
     if (error) throw error;
     
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
     // Get owner names using the secure function
     const productsWithOwners = await Promise.all(
       (data || []).map(async (product: any) => {
@@ -46,6 +49,35 @@ export const productsService = {
           owner_user_id: product.user_id
         });
         
+        // If user doesn't own this product, return only basic info
+        if (user?.id !== product.user_id) {
+          return {
+            id: product.id,
+            user_id: product.user_id,
+            category_id: product.category_id,
+            gpsr_identification_details: product.gpsr_identification_details, // Product name
+            created_at: product.created_at,
+            updated_at: product.updated_at,
+            owner_name: ownerName || 'Unknown User',
+            // Hide sensitive fields for non-owners
+            gpsr_warning_phrases: null,
+            gpsr_warning_text: null,
+            gpsr_pictograms: null,
+            gpsr_additional_safety_info: null,
+            gpsr_statement_of_compliance: null,
+            gpsr_online_instructions_url: null,
+            gpsr_instructions_manual: null,
+            gpsr_declarations_of_conformity: null,
+            gpsr_certificates: null,
+            gpsr_moderation_status: null,
+            gpsr_moderation_comment: null,
+            gpsr_last_submission_date: null,
+            gpsr_last_moderation_date: null,
+            gpsr_submitted_by_supplier_user: null
+          };
+        }
+        
+        // Return full details for owned products
         return {
           ...product,
           owner_name: ownerName || 'Unknown User'
@@ -65,11 +97,43 @@ export const productsService = {
     
     if (error) throw error;
     
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
     // Get owner name using the secure function
     const { data: ownerName } = await supabase.rpc('get_owner_name', {
       owner_user_id: data.user_id
     });
     
+    // If user doesn't own this product, return only basic info
+    if (user?.id !== data.user_id) {
+      return {
+        id: data.id,
+        user_id: data.user_id,
+        category_id: data.category_id,
+        gpsr_identification_details: data.gpsr_identification_details, // Product name
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        owner_name: ownerName || 'Unknown User',
+        // Hide sensitive fields for non-owners
+        gpsr_warning_phrases: null,
+        gpsr_warning_text: null,
+        gpsr_pictograms: null,
+        gpsr_additional_safety_info: null,
+        gpsr_statement_of_compliance: null,
+        gpsr_online_instructions_url: null,
+        gpsr_instructions_manual: null,
+        gpsr_declarations_of_conformity: null,
+        gpsr_certificates: null,
+        gpsr_moderation_status: null,
+        gpsr_moderation_comment: null,
+        gpsr_last_submission_date: null,
+        gpsr_last_moderation_date: null,
+        gpsr_submitted_by_supplier_user: null
+      };
+    }
+    
+    // Return full details for owned products
     return {
       ...data,
       owner_name: ownerName || 'Unknown User'

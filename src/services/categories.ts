@@ -20,6 +20,9 @@ export const categoriesService = {
     
     if (error) throw error;
     
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
     // Get owner names using the secure function
     const categoriesWithOwners = await Promise.all(
       (data || []).map(async (category: any) => {
@@ -27,6 +30,22 @@ export const categoriesService = {
           owner_user_id: category.user_id
         });
         
+        // If user doesn't own this category, return only basic info
+        if (user?.id !== category.user_id) {
+          return {
+            id: category.id,
+            name: category.name,
+            parent_id: category.parent_id,
+            user_id: category.user_id,
+            created_at: category.created_at,
+            updated_at: category.updated_at,
+            owner_name: ownerName || 'Unknown User',
+            // Hide description for non-owners
+            description: null
+          };
+        }
+        
+        // Return full details for owned categories
         return {
           ...category,
           owner_name: ownerName || 'Unknown User'
