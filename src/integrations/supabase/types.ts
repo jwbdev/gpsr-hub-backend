@@ -168,6 +168,30 @@ export type Database = {
         Args: { owner_user_id: string }
         Returns: string
       }
+      get_shared_categories: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          id: string
+          name: string
+          owner_name: string
+          parent_id: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
+      get_shared_products: {
+        Args: { category_filter?: string }
+        Returns: {
+          category_id: string
+          created_at: string
+          gpsr_identification_details: string
+          id: string
+          owner_name: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

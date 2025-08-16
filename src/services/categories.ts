@@ -13,46 +13,49 @@ export interface Category {
 
 export const categoriesService = {
   async getCategories(): Promise<Category[]> {
-    const { data, error } = await supabase
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) throw new Error('User not authenticated');
+
+    // Get user's own categories (full details)
+    const { data: ownCategories, error: ownError } = await supabase
       .from('categories')
       .select('*')
       .order('name');
     
-    if (error) throw error;
+    if (ownError) throw ownError;
+
+    // Get shared categories (basic info only) from all users  
+    const { data: sharedCategories, error: sharedError } = await supabase
+      .rpc('get_shared_categories');
     
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    // Get owner names using the secure function
-    const categoriesWithOwners = await Promise.all(
-      (data || []).map(async (category: any) => {
-        const { data: ownerName } = await supabase.rpc('get_owner_name', {
-          owner_user_id: category.user_id
-        });
-        
-        // If user doesn't own this category, return only basic info
-        if (user?.id !== category.user_id) {
-          return {
-            id: category.id,
-            name: category.name,
-            parent_id: category.parent_id,
-            user_id: category.user_id,
-            created_at: category.created_at,
-            updated_at: category.updated_at,
-            owner_name: ownerName || 'Unknown User',
-            // Hide description for non-owners
-            description: null
-          };
-        }
-        
-        // Return full details for owned categories
+    if (sharedError) throw sharedError;
+
+    // Merge own categories (full details) with others (basic info)
+    const categoriesWithOwners = (sharedCategories || []).map((shared: any) => {
+      // If user owns this category, return full details
+      if (user.id === shared.user_id) {
+        const ownCategory = ownCategories?.find(cat => cat.id === shared.id);
         return {
-          ...category,
-          owner_name: ownerName || 'Unknown User'
+          ...ownCategory,
+          owner_name: shared.owner_name
         };
-      })
-    );
-    
+      }
+      
+      // For non-owned categories, return only basic info (no description)
+      return {
+        id: shared.id,
+        name: shared.name,
+        parent_id: shared.parent_id,
+        user_id: shared.user_id,
+        created_at: shared.created_at,
+        updated_at: shared.updated_at,
+        owner_name: shared.owner_name,
+        description: null // Hide description for non-owned categories
+      };
+    });
+
     return categoriesWithOwners;
   },
 

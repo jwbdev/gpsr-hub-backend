@@ -26,96 +26,51 @@ export interface Product {
 
 export const productsService = {
   async getProducts(categoryId?: string): Promise<Product[]> {
-    let query = supabase
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) throw new Error('User not authenticated');
+
+    // Get user's own products (full details)
+    let ownQuery = supabase
       .from('products')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (categoryId) {
-      query = query.eq('category_id', categoryId);
+      ownQuery = ownQuery.eq('category_id', categoryId);
     }
 
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    // Get owner names using the secure function
-    const productsWithOwners = await Promise.all(
-      (data || []).map(async (product: any) => {
-        const { data: ownerName } = await supabase.rpc('get_owner_name', {
-          owner_user_id: product.user_id
-        });
-        
-        // If user doesn't own this product, return only basic info
-        if (user?.id !== product.user_id) {
-          return {
-            id: product.id,
-            user_id: product.user_id,
-            category_id: product.category_id,
-            gpsr_identification_details: product.gpsr_identification_details, // Product name
-            created_at: product.created_at,
-            updated_at: product.updated_at,
-            owner_name: ownerName || 'Unknown User',
-            // Hide sensitive fields for non-owners
-            gpsr_warning_phrases: null,
-            gpsr_warning_text: null,
-            gpsr_pictograms: null,
-            gpsr_additional_safety_info: null,
-            gpsr_statement_of_compliance: null,
-            gpsr_online_instructions_url: null,
-            gpsr_instructions_manual: null,
-            gpsr_declarations_of_conformity: null,
-            gpsr_certificates: null,
-            gpsr_moderation_status: null,
-            gpsr_moderation_comment: null,
-            gpsr_last_submission_date: null,
-            gpsr_last_moderation_date: null,
-            gpsr_submitted_by_supplier_user: null
-          };
-        }
-        
-        // Return full details for owned products
-        return {
-          ...product,
-          owner_name: ownerName || 'Unknown User'
-        };
-      })
-    );
-    
-    return productsWithOwners;
-  },
+    const { data: ownProducts, error: ownError } = await ownQuery;
+    if (ownError) throw ownError;
 
-  async getProduct(id: string): Promise<Product> {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('id', id)
-      .single();
+    // Get shared products (basic info only) from all users
+    const { data: sharedProducts, error: sharedError } = await supabase
+      .rpc('get_shared_products', { category_filter: categoryId || null });
     
-    if (error) throw error;
-    
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    // Get owner name using the secure function
-    const { data: ownerName } = await supabase.rpc('get_owner_name', {
-      owner_user_id: data.user_id
-    });
-    
-    // If user doesn't own this product, return only basic info
-    if (user?.id !== data.user_id) {
+    if (sharedError) throw sharedError;
+
+    // Merge own products (full details) with others (basic info)
+    const productsWithOwners = (sharedProducts || []).map((shared: any) => {
+      // If user owns this product, return full details
+      if (user.id === shared.user_id) {
+        const ownProduct = ownProducts?.find(prod => prod.id === shared.id);
+        return {
+          ...ownProduct,
+          owner_name: shared.owner_name
+        };
+      }
+      
+      // For non-owned products, return only basic info
       return {
-        id: data.id,
-        user_id: data.user_id,
-        category_id: data.category_id,
-        gpsr_identification_details: data.gpsr_identification_details, // Product name
-        created_at: data.created_at,
-        updated_at: data.updated_at,
-        owner_name: ownerName || 'Unknown User',
-        // Hide sensitive fields for non-owners
+        id: shared.id,
+        user_id: shared.user_id,
+        category_id: shared.category_id,
+        gpsr_identification_details: shared.gpsr_identification_details, // Product name
+        created_at: shared.created_at,
+        updated_at: shared.updated_at,
+        owner_name: shared.owner_name,
+        // Hide all sensitive GPSR fields for non-owned products
         gpsr_warning_phrases: null,
         gpsr_warning_text: null,
         gpsr_pictograms: null,
@@ -131,12 +86,72 @@ export const productsService = {
         gpsr_last_moderation_date: null,
         gpsr_submitted_by_supplier_user: null
       };
+    });
+
+    return productsWithOwners;
+  },
+
+  async getProduct(id: string): Promise<Product> {
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) throw new Error('User not authenticated');
+
+    // Try to get product as owner first
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    // If user owns this product, return full details
+    if (!error && data && user.id === data.user_id) {
+      const { data: ownerName } = await supabase.rpc('get_owner_name', {
+        owner_user_id: data.user_id
+      });
+      
+      return {
+        ...data,
+        owner_name: ownerName || 'Unknown User'
+      };
     }
     
-    // Return full details for owned products
+    // If product doesn't exist in user's access or not owned, get shared version
+    const { data: sharedProducts, error: sharedError } = await supabase
+      .rpc('get_shared_products');
+    
+    if (sharedError) throw sharedError;
+    
+    const sharedProduct = sharedProducts?.find((p: any) => p.id === id);
+    
+    if (!sharedProduct) {
+      throw new Error('Product not found');
+    }
+    
+    // Return basic info for non-owned products
     return {
-      ...data,
-      owner_name: ownerName || 'Unknown User'
+      id: sharedProduct.id,
+      user_id: sharedProduct.user_id,
+      category_id: sharedProduct.category_id,
+      gpsr_identification_details: sharedProduct.gpsr_identification_details,
+      created_at: sharedProduct.created_at,
+      updated_at: sharedProduct.updated_at,
+      owner_name: sharedProduct.owner_name,
+      // Hide all sensitive GPSR fields
+      gpsr_warning_phrases: null,
+      gpsr_warning_text: null,
+      gpsr_pictograms: null,
+      gpsr_additional_safety_info: null,
+      gpsr_statement_of_compliance: null,
+      gpsr_online_instructions_url: null,
+      gpsr_instructions_manual: null,
+      gpsr_declarations_of_conformity: null,
+      gpsr_certificates: null,
+      gpsr_moderation_status: null,
+      gpsr_moderation_comment: null,
+      gpsr_last_submission_date: null,
+      gpsr_last_moderation_date: null,
+      gpsr_submitted_by_supplier_user: null
     };
   },
 
