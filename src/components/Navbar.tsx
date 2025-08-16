@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { LogOut, User, Package, FolderTree, Search } from 'lucide-react';
+import { LogOut, User, Package, FolderTree, Search, Share } from 'lucide-react';
 
 export const Navbar = () => {
   const { user, signOut } = useAuth();
@@ -54,6 +54,18 @@ export const Navbar = () => {
                 >
                   <Package className="h-4 w-4" />
                   <span>Products</span>
+                </Link>
+
+                <Link
+                  to="/access-requests"
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive('/access-requests')
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                  }`}
+                >
+                  <Share className="h-4 w-4" />
+                  <span>Access Requests</span>
                 </Link>
               </div>
             )}

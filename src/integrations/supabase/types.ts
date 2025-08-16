@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_requests: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          owner_user_id: string
+          requester_user_id: string
+          resource_id: string
+          resource_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          owner_user_id: string
+          requester_user_id: string
+          resource_id: string
+          resource_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          owner_user_id?: string
+          requester_user_id?: string
+          resource_id?: string
+          resource_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -159,6 +195,33 @@ export type Database = {
         }
         Relationships: []
       }
+      shared_access: {
+        Row: {
+          granted_at: string
+          id: string
+          owner_user_id: string
+          resource_id: string
+          resource_type: string
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          id?: string
+          owner_user_id: string
+          resource_id: string
+          resource_type: string
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          id?: string
+          owner_user_id?: string
+          resource_id?: string
+          resource_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -191,6 +254,14 @@ export type Database = {
           updated_at: string
           user_id: string
         }[]
+      }
+      user_has_access: {
+        Args: {
+          resource_id_param: string
+          resource_type_param: string
+          user_id_param: string
+        }
+        Returns: boolean
       }
     }
     Enums: {

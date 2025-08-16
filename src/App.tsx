@@ -13,6 +13,7 @@ import CategoryBrowser from "./pages/CategoryBrowser";
 import Products from "./pages/Products";
 import ProductForm from "./pages/ProductForm";
 import ProductDetail from "./pages/ProductDetail";
+import AccessRequests from "./pages/AccessRequests";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,11 @@ const App = () => (
             <Route path="/products/:id/edit" element={
               <ProtectedRoute>
                 <ProductForm />
+              </ProtectedRoute>
+            } />
+            <Route path="/access-requests" element={
+              <ProtectedRoute>
+                <AccessRequests />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

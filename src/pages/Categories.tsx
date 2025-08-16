@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { categoriesService, Category } from '@/services/categories';
+import { accessRequestsService } from '@/services/accessRequests';
+import { RequestAccessButton } from '@/components/RequestAccessButton';
 import { Plus, Edit, Trash2, FolderTree } from 'lucide-react';
 
 export default function Categories() {
@@ -16,6 +18,7 @@ export default function Categories() {
   const [loading, setLoading] = useState(true);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [requestStates, setRequestStates] = useState<{[key: string]: {hasRequested: boolean, hasAccess: boolean}}>({});
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -27,6 +30,21 @@ export default function Categories() {
     try {
       const data = await categoriesService.getCategories();
       setCategories(data);
+      
+      // Check request and access states for non-owned categories
+      const states: {[key: string]: {hasRequested: boolean, hasAccess: boolean}} = {};
+      
+      for (const category of data) {
+        if (user?.id !== category.user_id) {
+          const [hasRequested, hasAccess] = await Promise.all([
+            accessRequestsService.hasRequestedAccess('category', category.id),
+            accessRequestsService.hasSharedAccess('category', category.id)
+          ]);
+          states[category.id] = { hasRequested, hasAccess };
+        }
+      }
+      
+      setRequestStates(states);
     } catch (error) {
       toast({
         title: "Error",
@@ -136,7 +154,7 @@ export default function Categories() {
                   </p>
                 </div>
               </div>
-              {user?.id === category.user_id && (
+              {user?.id === category.user_id ? (
                 <div className="flex space-x-2">
                   <Button
                     variant="outline"
@@ -153,6 +171,16 @@ export default function Categories() {
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
+              ) : (
+                <RequestAccessButton
+                  resourceType="category"
+                  resourceId={category.id}
+                  resourceName={category.name}
+                  ownerUserId={category.user_id}
+                  ownerName={category.owner_name || 'Unknown User'}
+                  hasRequested={requestStates[category.id]?.hasRequested || false}
+                  hasAccess={requestStates[category.id]?.hasAccess || false}
+                />
               )}
             </div>
           </CardContent>

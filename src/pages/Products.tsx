@@ -8,6 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { productsService, Product } from '@/services/products';
 import { categoriesService, Category } from '@/services/categories';
+import { accessRequestsService } from '@/services/accessRequests';
+import { RequestAccessButton } from '@/components/RequestAccessButton';
 import { Plus, Package, Eye, Edit, Trash2 } from 'lucide-react';
 
 export default function Products() {
@@ -15,6 +17,7 @@ export default function Products() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [requestStates, setRequestStates] = useState<{[key: string]: {hasRequested: boolean, hasAccess: boolean}}>({});
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -36,6 +39,21 @@ export default function Products() {
       ]);
       setProducts(productsData);
       setCategories(categoriesData);
+      
+      // Check request and access states for non-owned products
+      const states: {[key: string]: {hasRequested: boolean, hasAccess: boolean}} = {};
+      
+      for (const product of productsData) {
+        if (user?.id !== product.user_id) {
+          const [hasRequested, hasAccess] = await Promise.all([
+            accessRequestsService.hasRequestedAccess('product', product.id),
+            accessRequestsService.hasSharedAccess('product', product.id)
+          ]);
+          states[product.id] = { hasRequested, hasAccess };
+        }
+      }
+      
+      setRequestStates(states);
     } catch (error) {
       toast({
         title: "Error",
@@ -196,7 +214,7 @@ export default function Products() {
                       </Link>
                     )}
                   </div>
-                  {user?.id === product.user_id && (
+                  {user?.id === product.user_id ? (
                     <Button
                       variant="destructive"
                       size="sm"
@@ -204,6 +222,16 @@ export default function Products() {
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                  ) : (
+                    <RequestAccessButton
+                      resourceType="product"
+                      resourceId={product.id}
+                      resourceName={product.gpsr_identification_details || 'Untitled Product'}
+                      ownerUserId={product.user_id}
+                      ownerName={product.owner_name || 'Unknown User'}
+                      hasRequested={requestStates[product.id]?.hasRequested || false}
+                      hasAccess={requestStates[product.id]?.hasAccess || false}
+                    />
                   )}
                 </div>
               </CardContent>
