@@ -643,14 +643,14 @@ export default function ProductForm() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Submitted by Supplier</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <Select onValueChange={(value) => field.onChange(value === "none" ? "" : value)} value={field.value || "none"}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select a supplier" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">No supplier selected</SelectItem>
+                            <SelectItem value="none">No supplier selected</SelectItem>
                             {suppliers.map((supplier) => (
                               <SelectItem key={supplier.id} value={supplier.id}>
                                 {supplier.name}
