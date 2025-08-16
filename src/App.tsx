@@ -14,6 +14,8 @@ import Products from "./pages/Products";
 import ProductForm from "./pages/ProductForm";
 import ProductDetail from "./pages/ProductDetail";
 import AccessRequests from "./pages/AccessRequests";
+import Suppliers from "./pages/Suppliers";
+import SupplierForm from "./pages/SupplierForm";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,6 +64,21 @@ const App = () => (
             <Route path="/access-requests" element={
               <ProtectedRoute>
                 <AccessRequests />
+              </ProtectedRoute>
+            } />
+            <Route path="/suppliers" element={
+              <ProtectedRoute>
+                <Suppliers />
+              </ProtectedRoute>
+            } />
+            <Route path="/suppliers/new" element={
+              <ProtectedRoute>
+                <SupplierForm />
+              </ProtectedRoute>
+            } />
+            <Route path="/suppliers/:id/edit" element={
+              <ProtectedRoute>
+                <SupplierForm />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

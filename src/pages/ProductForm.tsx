@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { productsService, Product } from '@/services/products';
 import { categoriesService, Category } from '@/services/categories';
+import { suppliersService, Supplier } from '@/services/suppliers';
 import { useAuth } from '@/hooks/useAuth';
 import { Upload, X, AlertCircle } from 'lucide-react';
 
@@ -30,7 +31,7 @@ const productSchema = z.object({
   gpsr_moderation_comment: z.string().max(500, "Moderation comment must be less than 500 characters").optional(),
   gpsr_last_submission_date: z.string().optional(),
   gpsr_last_moderation_date: z.string().optional(),
-  gpsr_submitted_by_supplier_user: z.string().max(100, "Supplier user must be less than 100 characters").optional(),
+  gpsr_submitted_by_supplier_user: z.string().optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -43,6 +44,7 @@ export default function ProductForm() {
   
   const [product, setProduct] = useState<Partial<Product>>({});
   const [categories, setCategories] = useState<Category[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(!!id);
   const [saving, setSaving] = useState(false);
   const [warningPhrases, setWarningPhrases] = useState<string[]>([]);
@@ -69,6 +71,7 @@ export default function ProductForm() {
 
   useEffect(() => {
     loadCategories();
+    loadSuppliers();
     if (id) {
       loadProduct();
     }
@@ -82,6 +85,20 @@ export default function ProductForm() {
       toast({
         title: "Error",
         description: "Failed to load categories",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const loadSuppliers = async () => {
+    try {
+      const data = await suppliersService.getSuppliers();
+      setSuppliers(data);
+    } catch (error) {
+      console.error('Error loading suppliers:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load suppliers",
         variant: "destructive",
       });
     }
@@ -625,14 +642,22 @@ export default function ProductForm() {
                     name="gpsr_submitted_by_supplier_user"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Submitted by Supplier User</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter supplier user ID"
-                            {...field}
-                            className={form.formState.errors.gpsr_submitted_by_supplier_user ? "border-destructive" : ""}
-                          />
-                        </FormControl>
+                        <FormLabel>Submitted by Supplier</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a supplier" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="">No supplier selected</SelectItem>
+                            {suppliers.map((supplier) => (
+                              <SelectItem key={supplier.id} value={supplier.id}>
+                                {supplier.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
