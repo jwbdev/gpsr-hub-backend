@@ -28,10 +28,7 @@ export const productsService = {
   async getProducts(categoryId?: string): Promise<Product[]> {
     let query = supabase
       .from('products')
-      .select(`
-        *,
-        profiles(first_name, last_name)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (categoryId) {
@@ -41,29 +38,50 @@ export const productsService = {
     const { data, error } = await query;
     
     if (error) throw error;
-    return data?.map((product: any) => ({
-      ...product,
-      owner_name: product.profiles 
-        ? `${product.profiles.first_name || ''} ${product.profiles.last_name || ''}`.trim() || 'Unknown User'
-        : 'Unknown User'
-    })) || [];
+    
+    // Get all unique user IDs
+    const userIds = [...new Set(data?.map(product => product.user_id) || [])];
+    
+    // Fetch profiles for these users
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('user_id, first_name, last_name')
+      .in('user_id', userIds);
+    
+    // Create a map of user_id to profile
+    const profileMap = new Map(profiles?.map(profile => [profile.user_id, profile]) || []);
+    
+    return data?.map((product: any) => {
+      const profile = profileMap.get(product.user_id);
+      return {
+        ...product,
+        owner_name: profile 
+          ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown User'
+          : 'Unknown User'
+      };
+    }) || [];
   },
 
   async getProduct(id: string): Promise<Product> {
     const { data, error } = await supabase
       .from('products')
-      .select(`
-        *,
-        profiles(first_name, last_name)
-      `)
+      .select('*')
       .eq('id', id)
       .single();
     
     if (error) throw error;
+    
+    // Fetch the profile for this user
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('user_id, first_name, last_name')
+      .eq('user_id', data.user_id)
+      .single();
+    
     return {
       ...data,
-      owner_name: (data as any).profiles 
-        ? `${(data as any).profiles.first_name || ''} ${(data as any).profiles.last_name || ''}`.trim() || 'Unknown User'
+      owner_name: profile 
+        ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown User'
         : 'Unknown User'
     };
   },
