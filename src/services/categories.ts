@@ -15,32 +15,14 @@ export const categoriesService = {
   async getCategories(): Promise<Category[]> {
     const { data, error } = await supabase
       .from('categories')
-      .select('*')
+      .select(`
+        *,
+        owner_name:get_owner_name(user_id)
+      `)
       .order('name');
     
     if (error) throw error;
-    
-    // Get all unique user IDs
-    const userIds = [...new Set(data?.map(cat => cat.user_id) || [])];
-    
-    // Fetch profiles for these users
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('user_id, first_name, last_name')
-      .in('user_id', userIds);
-    
-    // Create a map of user_id to profile
-    const profileMap = new Map(profiles?.map(profile => [profile.user_id, profile]) || []);
-    
-    return data?.map((category: any) => {
-      const profile = profileMap.get(category.user_id);
-      return {
-        ...category,
-        owner_name: profile 
-          ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown User'
-          : 'Unknown User'
-      };
-    }) || [];
+    return data || [];
   },
 
   async createCategory(category: Omit<Category, 'id' | 'created_at' | 'updated_at' | 'user_id'>): Promise<Category> {

@@ -50,13 +50,6 @@ export type Database = {
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "categories_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "categories_with_owner"
-            referencedColumns: ["id"]
-          },
         ]
       }
       products: {
@@ -134,13 +127,6 @@ export type Database = {
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "products_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories_with_owner"
-            referencedColumns: ["id"]
-          },
         ]
       }
       profiles: {
@@ -175,141 +161,7 @@ export type Database = {
       }
     }
     Views: {
-      categories_with_owner: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          id: string | null
-          name: string | null
-          owner_name: string | null
-          parent_id: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          id?: string | null
-          name?: string | null
-          owner_name?: never
-          parent_id?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          id?: string | null
-          name?: string | null
-          owner_name?: never
-          parent_id?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "categories_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "categories_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "categories_with_owner"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      products_with_owner: {
-        Row: {
-          category_id: string | null
-          created_at: string | null
-          gpsr_additional_safety_info: string | null
-          gpsr_certificates: string | null
-          gpsr_declarations_of_conformity: string | null
-          gpsr_identification_details: string | null
-          gpsr_instructions_manual: string | null
-          gpsr_last_moderation_date: string | null
-          gpsr_last_submission_date: string | null
-          gpsr_moderation_comment: string | null
-          gpsr_moderation_status: string | null
-          gpsr_online_instructions_url: string | null
-          gpsr_pictograms: string[] | null
-          gpsr_statement_of_compliance: boolean | null
-          gpsr_submitted_by_supplier_user: string | null
-          gpsr_warning_phrases: string[] | null
-          gpsr_warning_text: string | null
-          id: string | null
-          owner_name: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          category_id?: string | null
-          created_at?: string | null
-          gpsr_additional_safety_info?: string | null
-          gpsr_certificates?: string | null
-          gpsr_declarations_of_conformity?: string | null
-          gpsr_identification_details?: string | null
-          gpsr_instructions_manual?: string | null
-          gpsr_last_moderation_date?: string | null
-          gpsr_last_submission_date?: string | null
-          gpsr_moderation_comment?: string | null
-          gpsr_moderation_status?: string | null
-          gpsr_online_instructions_url?: string | null
-          gpsr_pictograms?: string[] | null
-          gpsr_statement_of_compliance?: boolean | null
-          gpsr_submitted_by_supplier_user?: string | null
-          gpsr_warning_phrases?: string[] | null
-          gpsr_warning_text?: string | null
-          id?: string | null
-          owner_name?: never
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          category_id?: string | null
-          created_at?: string | null
-          gpsr_additional_safety_info?: string | null
-          gpsr_certificates?: string | null
-          gpsr_declarations_of_conformity?: string | null
-          gpsr_identification_details?: string | null
-          gpsr_instructions_manual?: string | null
-          gpsr_last_moderation_date?: string | null
-          gpsr_last_submission_date?: string | null
-          gpsr_moderation_comment?: string | null
-          gpsr_moderation_status?: string | null
-          gpsr_online_instructions_url?: string | null
-          gpsr_pictograms?: string[] | null
-          gpsr_statement_of_compliance?: boolean | null
-          gpsr_submitted_by_supplier_user?: string | null
-          gpsr_warning_phrases?: string[] | null
-          gpsr_warning_text?: string | null
-          id?: string | null
-          owner_name?: never
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "products_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories_with_owner"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       get_owner_name: {

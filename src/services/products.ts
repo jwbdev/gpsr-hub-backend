@@ -28,7 +28,10 @@ export const productsService = {
   async getProducts(categoryId?: string): Promise<Product[]> {
     let query = supabase
       .from('products')
-      .select('*')
+      .select(`
+        *,
+        owner_name:get_owner_name(user_id)
+      `)
       .order('created_at', { ascending: false });
 
     if (categoryId) {
@@ -38,52 +41,21 @@ export const productsService = {
     const { data, error } = await query;
     
     if (error) throw error;
-    
-    // Get all unique user IDs
-    const userIds = [...new Set(data?.map(product => product.user_id) || [])];
-    
-    // Fetch profiles for these users
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('user_id, first_name, last_name')
-      .in('user_id', userIds);
-    
-    // Create a map of user_id to profile
-    const profileMap = new Map(profiles?.map(profile => [profile.user_id, profile]) || []);
-    
-    return data?.map((product: any) => {
-      const profile = profileMap.get(product.user_id);
-      return {
-        ...product,
-        owner_name: profile 
-          ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown User'
-          : 'Unknown User'
-      };
-    }) || [];
+    return data || [];
   },
 
   async getProduct(id: string): Promise<Product> {
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select(`
+        *,
+        owner_name:get_owner_name(user_id)
+      `)
       .eq('id', id)
       .single();
     
     if (error) throw error;
-    
-    // Fetch the profile for this user
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('user_id, first_name, last_name')
-      .eq('user_id', data.user_id)
-      .single();
-    
-    return {
-      ...data,
-      owner_name: profile 
-        ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown User'
-        : 'Unknown User'
-    };
+    return data;
   },
 
   async createProduct(product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'user_id'>): Promise<Product> {
