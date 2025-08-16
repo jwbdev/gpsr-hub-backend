@@ -166,6 +166,9 @@ export default function Products() {
                   <p className="text-sm text-muted-foreground">
                     <strong>Category:</strong> {getCategoryName(product.category_id)}
                   </p>
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Created by:</strong> {product.owner_name || 'Unknown User'}
+                  </p>
                   {product.gpsr_warning_text && (
                     <p className="text-sm line-clamp-2">
                       <strong>Warning:</strong> {product.gpsr_warning_text}

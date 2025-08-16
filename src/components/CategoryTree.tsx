@@ -10,6 +10,7 @@ export interface Category {
   user_id: string;
   created_at: string;
   updated_at: string;
+  owner_name?: string;
 }
 
 interface CategoryWithChildren extends Category {

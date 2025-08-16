@@ -129,6 +129,9 @@ export default function Categories() {
                   {category.description && (
                     <p className="text-sm text-muted-foreground">{category.description}</p>
                   )}
+                  <p className="text-xs text-muted-foreground">
+                    Created by: {category.owner_name || 'Unknown User'}
+                  </p>
                 </div>
               </div>
               <div className="flex space-x-2">

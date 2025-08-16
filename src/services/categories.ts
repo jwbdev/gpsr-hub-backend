@@ -8,17 +8,26 @@ export interface Category {
   user_id: string;
   created_at: string;
   updated_at: string;
+  owner_name?: string;
 }
 
 export const categoriesService = {
   async getCategories(): Promise<Category[]> {
     const { data, error } = await supabase
       .from('categories')
-      .select('*')
+      .select(`
+        *,
+        profiles(first_name, last_name)
+      `)
       .order('name');
     
     if (error) throw error;
-    return data || [];
+    return data?.map((category: any) => ({
+      ...category,
+      owner_name: category.profiles 
+        ? `${category.profiles.first_name || ''} ${category.profiles.last_name || ''}`.trim() || 'Unknown User'
+        : 'Unknown User'
+    })) || [];
   },
 
   async createCategory(category: Omit<Category, 'id' | 'created_at' | 'updated_at' | 'user_id'>): Promise<Category> {

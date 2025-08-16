@@ -21,34 +21,51 @@ export interface Product {
   gpsr_submitted_by_supplier_user?: string;
   created_at: string;
   updated_at: string;
+  owner_name?: string;
 }
 
 export const productsService = {
   async getProducts(categoryId?: string): Promise<Product[]> {
     let query = supabase
       .from('products')
-      .select('*')
+      .select(`
+        *,
+        profiles(first_name, last_name)
+      `)
       .order('created_at', { ascending: false });
-    
+
     if (categoryId) {
       query = query.eq('category_id', categoryId);
     }
-    
+
     const { data, error } = await query;
     
     if (error) throw error;
-    return data || [];
+    return data?.map((product: any) => ({
+      ...product,
+      owner_name: product.profiles 
+        ? `${product.profiles.first_name || ''} ${product.profiles.last_name || ''}`.trim() || 'Unknown User'
+        : 'Unknown User'
+    })) || [];
   },
 
   async getProduct(id: string): Promise<Product> {
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select(`
+        *,
+        profiles(first_name, last_name)
+      `)
       .eq('id', id)
       .single();
     
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      owner_name: (data as any).profiles 
+        ? `${(data as any).profiles.first_name || ''} ${(data as any).profiles.last_name || ''}`.trim() || 'Unknown User'
+        : 'Unknown User'
+    };
   },
 
   async createProduct(product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'user_id'>): Promise<Product> {
