@@ -41,7 +41,7 @@ export const Navbar = () => {
                   }`}
                 >
                   <Search className="h-4 w-4" />
-                  <span>Browse Tree</span>
+                  <span>Categories Tree</span>
                 </Link>
                 
                 <Link
